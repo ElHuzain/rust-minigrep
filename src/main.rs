@@ -1,3 +1,4 @@
+use crate::env::Args;
 use minigrep::{search, search_case_insensitive};
 use std::env;
 use std::error::Error;
@@ -5,8 +6,7 @@ use std::fs;
 use std::process;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let config = Config::build(&args).unwrap_or_else(|err| {
+    let config = Config::build(env::args()).unwrap_or_else(|err| {
         eprintln!("Problem parsing arguments: {err}");
         process::exit(1);
     });
@@ -24,16 +24,24 @@ struct Config {
 }
 
 impl Config {
-    fn build(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Not enough configs.");
-        }
+    fn build(mut args: Args) -> Result<Config, &'static str> {
+        args.next(); // We're discarding the first command line value, which is usually just the path of the executable
+
+        let query = match args.next() {
+            Some(v) => v,
+            None => return Err("Query string not found."),
+        };
+
+        let file_path = match args.next() {
+            Some(v) => v,
+            None => return Err("File path not found."),
+        };
 
         let ignore_case = env::var("IGNORE_CASE").is_ok();
 
         Ok(Config {
-            query: args[1].clone(),
-            file_path: args[2].clone(),
+            query,
+            file_path,
             ignore_case,
         })
     }
